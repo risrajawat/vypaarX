@@ -1,0 +1,350 @@
+// Prisma Schema for Local Development (SQLite)
+// Automatically mapped from PostgreSQL schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id            String          @id @default(uuid())
+  email         String          @unique
+  passwordHash  String
+  name          String
+  phone         String?
+  role          String          @default("CLIENT") // ADMIN, TEAM_MEMBER, CLIENT
+  avatarUrl     String?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  business      Business?
+  assignedTasks Task[]          @relation("AssignedTasks")
+  approvals     Approval[]
+  supportTickets SupportRequest[]
+  notifications Notification[]
+  activityLogs  ActivityLog[]
+
+  @@index([email])
+  @@index([role])
+}
+
+model Business {
+  id                   String          @id @default(uuid())
+  ownerId              String          @unique
+  name                 String
+  category             String
+  description          String?
+  city                 String
+  state                String
+  country              String          @default("India")
+  phone                String?
+  email                String?
+  website              String?
+  instagram            String?
+  facebook             String?
+  goals                String?         // Stored as JSON string
+  discoveryMethods     String?         // Stored as JSON string
+  customerStatus       String          @default("PROSPECT") // PROSPECT, ONBOARDING, AUDIT_REQUESTED, AUDIT_REVIEWED, PROPOSAL_SENT, ACTIVE_CLIENT, COMPLETED, INACTIVE
+  growthStage          String          @default("LOCAL")    // LOCAL, DIGITAL_FOUNDATION, ONLINE_DISCOVERY, CUSTOMER_TRUST, NATIONAL_REACH, GLOBAL_REACH
+  digitalReadinessScore Int            @default(0)
+  createdAt            DateTime        @default(now())
+  updatedAt            DateTime        @updatedAt
+
+  owner                User            @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  leads                Lead[]
+  audits               Audit[]
+  roadmaps             Roadmap[]
+  proposals            Proposal[]
+  projects             Project[]
+  reports              Report[]
+  supportRequests      SupportRequest[]
+  activityLogs         ActivityLog[]
+
+  @@index([ownerId])
+  @@index([customerStatus])
+  @@index([category])
+}
+
+model Lead {
+  id          String      @id @default(uuid())
+  businessId  String
+  ownerId     String
+  status      String      @default("NEW") // NEW, CONTACTED, AUDIT_REQUESTED, AUDIT_REVIEWED, PROPOSAL_SENT, CONVERTED, LOST
+  source      String      @default("WEBSITE_SIGNUP")
+  notes       String?
+  score       Int?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  business    Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model Audit {
+  id             String       @id @default(uuid())
+  businessId     String
+  status         String       @default("SUBMITTED") // SUBMITTED, UNDER_REVIEW, REVIEWED
+  overallScore   Int          @default(0)
+  websiteScore   Int          @default(0)
+  seoScore       Int          @default(0)
+  googleScore    Int          @default(0)
+  socialScore    Int          @default(0)
+  brandingScore  Int          @default(0)
+  salesScore     Int          @default(0)
+  rawAnswers     String       // JSON string
+  strengths      String       // JSON string array
+  weaknesses     String       // JSON string array
+  recommendations String      // JSON string array
+  internalNotes  String?
+  reviewedBy     String?
+  reviewedAt     DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  business       Business     @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model Roadmap {
+  id          String         @id @default(uuid())
+  businessId  String
+  title       String
+  description String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  business    Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  stages      RoadmapStage[]
+
+  @@index([businessId])
+}
+
+model RoadmapStage {
+  id                  String      @id @default(uuid())
+  roadmapId           String
+  title               String
+  description         String
+  order               Int
+  status              String      @default("LOCKED") // LOCKED, AVAILABLE, IN_PROGRESS, COMPLETED
+  priority            String      @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  recommendedServices String      // JSON string array
+  estimatedWeeks      Int         @default(2)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+
+  roadmap             Roadmap     @relation(fields: [roadmapId], references: [id], onDelete: Cascade)
+
+  @@index([roadmapId])
+  @@index([order])
+}
+
+model Proposal {
+  id             String          @id @default(uuid())
+  businessId     String
+  title          String
+  description    String?
+  validUntil     DateTime
+  status         String          @default("DRAFT") // DRAFT, SENT, VIEWED, ACCEPTED, REJECTED, EXPIRED
+  totalAmount    Float           @default(0)
+  currency       String          @default("INR")
+  clientFeedback String?
+  acceptedAt     DateTime?
+  rejectedAt     DateTime?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  items          ProposalItem[]
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model ProposalItem {
+  id          String   @id @default(uuid())
+  proposalId  String
+  service     String
+  description String
+  quantity    Int      @default(1)
+  price       Float    @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+}
+
+model Project {
+  id          String        @id @default(uuid())
+  businessId  String
+  name        String
+  description String?
+  status      String        @default("PLANNED") // PLANNED, IN_PROGRESS, CLIENT_REVIEW, COMPLETED, ON_HOLD
+  progress    Int           @default(0)
+  startDate   DateTime?
+  dueDate     DateTime?
+  completedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  business    Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  milestones  Milestone[]
+  tasks       Task[]
+  deliverables Deliverable[]
+
+  @@index([businessId])
+  @@index([status])
+}
+
+model Milestone {
+  id          String      @id @default(uuid())
+  projectId   String
+  title       String
+  description String?
+  order       Int
+  status      String      @default("LOCKED") // LOCKED, AVAILABLE, IN_PROGRESS, COMPLETED
+  dueDate     DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  project     Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([order])
+}
+
+model Task {
+  id              String     @id @default(uuid())
+  projectId       String
+  title           String
+  description     String?
+  assignedToId    String?
+  status          String     @default("TODO") // TODO, IN_PROGRESS, IN_REVIEW, COMPLETED
+  priority        String     @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  isClientVisible Boolean    @default(true)
+  dueDate         DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  project         Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assignedTo      User?      @relation("AssignedTasks", fields: [assignedToId], references: [id], onDelete: SetNull)
+
+  @@index([projectId])
+  @@index([assignedToId])
+  @@index([status])
+}
+
+model Deliverable {
+  id              String            @id @default(uuid())
+  projectId       String
+  name            String
+  description     String?
+  fileUrl         String?
+  previewUrl      String?
+  deliverableType String            @default("DOCUMENT")
+  status          String            @default("DRAFT") // DRAFT, PENDING_APPROVAL, APPROVED, REVISION_REQUESTED, FINAL
+  uploadedBy      String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  project         Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  approvals       Approval[]
+
+  @@index([projectId])
+  @@index([status])
+}
+
+model Approval {
+  id            String      @id @default(uuid())
+  deliverableId String
+  userId        String
+  action        String      // APPROVED or REVISION_REQUESTED
+  comment       String?
+  createdAt     DateTime    @default(now())
+
+  deliverable   Deliverable @relation(fields: [deliverableId], references: [id], onDelete: Cascade)
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([deliverableId])
+  @@index([userId])
+}
+
+model Report {
+  id              String   @id @default(uuid())
+  businessId      String
+  title           String
+  period          String
+  summary         String
+  metrics         String   // JSON string
+  recommendations String   // JSON string
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  business        Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+model SupportRequest {
+  id          String        @id @default(uuid())
+  businessId  String
+  userId      String
+  subject     String
+  message     String
+  priority    String        @default("MEDIUM") // LOW, MEDIUM, HIGH, URGENT
+  status      String        @default("OPEN")   // OPEN, IN_PROGRESS, RESOLVED
+  adminReply  String?
+  resolvedAt  DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  business    Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([userId])
+  @@index([status])
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  title     String
+  message   String
+  type      String           @default("INFO") // INFO, SUCCESS, WARNING, ACTION_REQUIRED
+  link      String?
+  read      Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([read])
+}
+
+model ActivityLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  businessId  String?
+  action      String
+  entityType  String
+  entityId    String?
+  metadata    String?  // JSON string
+  createdAt   DateTime @default(now())
+
+  user        User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  business    Business? @relation(fields: [businessId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([businessId])
+  @@index([action])
+}
