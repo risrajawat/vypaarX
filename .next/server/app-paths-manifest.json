@@ -1,9 +1,0 @@
-{
-  "/business/(portal)/roadmap/page": "app/business/(portal)/roadmap/page.js",
-  "/business/(portal)/proposals/page": "app/business/(portal)/proposals/page.js",
-  "/business/(portal)/profile/page": "app/business/(portal)/profile/page.js",
-  "/(marketing)/page": "app/(marketing)/page.js",
-  "/(marketing)/how-it-works/page": "app/(marketing)/how-it-works/page.js",
-  "/(marketing)/industries/page": "app/(marketing)/industries/page.js",
-  "/business/(portal)/audit/page": "app/business/(portal)/audit/page.js"
-}
